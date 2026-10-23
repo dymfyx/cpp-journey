@@ -71,6 +71,29 @@ ctest --test-dir build --output-on-failure
 7. 移动赋值：`if (this != &other) { close(); fp_ = other.fp_; other.fp_ = nullptr; }`；
 8. `write` 里注意 `data.size()` 可能是 0，也可能包含 `\0`，所以要用 `fwrite(data.data(), 1, data.size(), fp_)` 并检查返回值是否等于 `data.size()`。
 
+## 踩过的坑（真实记录）
+
+1. **改了 `src/file.cpp` 但没保存，`ctest` 结果没变**
+   现象：编辑器里明明写完了，`ctest` 还是 `1 passed / 11 failed`。
+   原因：VS Code 里改的只是内存中的缓冲区，没落盘；Ninja 看时间戳没变化，直接复用了旧 `.o`。
+   教训：测试结果「没反应」时，先看标签页上的未保存圆点和 `git status`，再怀疑代码。
+
+2. **构造函数抛的异常类型不对**
+   一开始用 `std::invalid_argument` 处理 `path == nullptr`，结果 `OpenWithBadArgumentsThrows` 失败。
+   原因：`std::invalid_argument` 派生自 `std::logic_error`，而测试 `EXPECT_THROW(..., std::runtime_error)` 捕获不到。
+   教训：**异常类型是接口的一部分**。参数本身非法用 `invalid_argument`，运行时失败（打不开文件、系统调用失败）用 `runtime_error`。
+
+3. **`noexcept` 函数里留了 `todo()`**
+   移动构造/赋值一度是空壳 + `todo()`。`noexcept` 函数里抛异常 → 直接 `std::terminate`，不是普通异常传播。
+   教训：标了 `noexcept` 的函数，内部不能有任何可能抛出的路径。
+
+4. **全部实现后没删 `todo()`，编译失败**
+   报错：`error: 'void raii::{anonymous}::todo(const char*)' defined but not used [-Werror=unused-function]`。
+   教训：占位炸弹用完要拆；`-Werror` 会把「未使用的函数」也变成编译错误。
+
+5. **`read_all()` 空函数体，编译失败**
+   报错：`control reaches end of non-void function [-Werror=return-type]`。返回类型不是 `void`，就每条路径都得有 `return`。
+
 ## 做完之后（写进笔记，下次口述给我听）
 
 1. 为什么 `File` 的移动构造可以 `noexcept`，而 `std::string` 的移动构造也 `noexcept`？

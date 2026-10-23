@@ -10,6 +10,16 @@
         "--header-insertion=never"
     ],
 
+    "files.watcherExclude": {
+        "**/build/**": true,
+        "**/.git/objects/**": true,
+        "**/.cache/**": true
+    },
+    "search.exclude": {
+        "**/build": true,
+        "**/.cache": true
+    },
+
     "files.associations": {
         "*.hpp": "cpp",
         "*.cpp": "cpp"
