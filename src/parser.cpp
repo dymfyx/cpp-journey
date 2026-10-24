@@ -27,24 +27,128 @@
 //       目标 13/13 全绿。
 #include "jq/parser.hpp"
 
-#include <stdexcept>
+#include <charconv>  
+#include <cstddef>
 #include <string>
+#include <string_view>
 
 #include "jq/error.hpp"
 
 namespace jq {
-
 namespace {
 
-[[noreturn]] void todo(const char* what) {
-    throw std::logic_error(std::string("TODO: 还没有实现 ") + what);
-}
+class Parser {
+public:
+    explicit Parser(std::string_view text) : text_(text) {}
+
+    Value parse_document() {
+        Value value = parse_value();
+        skip_whitespace();
+        if (!at_end()) fail("unexpected trailing characters");
+        return value;
+    }
+
+private:
+    bool at_end() const { return pos_ >= text_.size(); }
+
+    char peek() const { return at_end() ? '\0' : text_[pos_]; }
+
+    static bool is_digit(char c) { return c >= '0' && c <= '9'; }
+
+    char take() {
+        const char c = text_[pos_++];
+        if (c == '\n') {
+            ++line_;
+            column_ = 1;
+        } else {
+            ++column_;
+        }
+        return c;
+    }
+
+    [[noreturn]] void fail(const std::string& message) const {
+        throw ParseError(message, line_, column_);
+    }
+
+    void skip_whitespace() {
+        while (!at_end() &&
+               (peek() == ' ' || peek() == '\t' || peek() == '\n' || peek() == '\r')) {
+            take();
+        }
+    }
+
+    Value parse_value() {
+        skip_whitespace();
+        if (at_end()) fail("unexpected end of input");
+        switch (peek()) {
+            case 't': expect_literal("true");  return Value(true);
+            case 'f': expect_literal("false"); return Value(false);
+            case 'n': expect_literal("null");  return Value();
+           default:
+                if (peek() == '-' || (peek() >= '0' && peek() <= '9')) 
+                    return parse_number();
+                fail(std::string("unexpected character '") + peek() + "'");
+        }
+    }
+
+    void expect_literal(std::string_view literal) {
+        for (char expected : literal) {
+            if (at_end() || take() != expected) {
+                fail(std::string("invalid literal, expected \"") + std::string(literal) + "\"");
+            }
+        }
+    }
+     
+    Value parse_number(){
+        const std::size_t start = pos_;
+
+        //负号可选
+        if (!at_end() && peek() == '-') take();
+
+        //0开头，读整数/小数
+        if (peek() == '0') {
+            take();
+            if (!at_end() && is_digit(peek())) fail("invalid number: leading zero");
+        }
+        else if (is_digit(peek())){
+            while(!at_end() && is_digit(peek())) take();
+        }
+        else fail("invalid number: expected digit");
+
+        //读小数
+        if (peek() == '.'){
+            take();
+            if (at_end() || !is_digit(peek())) fail("invalid number: expected digit after '.'");
+            else while (!at_end() && is_digit(peek())) take();  
+        }
+
+        //读指数
+        if (!at_end() && (peek() == 'e' || peek() == 'E')) {
+            take();
+            if (!at_end() && (peek() == '-' || peek() == '+')) take();
+            if (at_end() || !is_digit(peek())) fail("invalid number: expected digit in exponent");
+            else while (!at_end() && is_digit(peek())) take();
+        }
+
+        double value = 0.0;
+        const char* first = text_.data() + start;
+        const char* last  = text_.data() + pos_;
+        const auto [ptr, ec] = std::from_chars(first, last, value);
+        if (ec != std::errc{} || ptr != last) fail("invalid number");
+        return Value(value);
+    }
+
+    std::string_view text_;
+    std::size_t pos_ = 0;
+    std::size_t line_ = 1;
+    std::size_t column_ = 1;
+};
 
 }  // namespace
 
 Value parse(std::string_view text) {
-    (void)text;
-    todo("jq::parse");
+    Parser parser(text);
+    return parser.parse_document();
 }
 
 }  // namespace jq
