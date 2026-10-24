@@ -55,6 +55,35 @@ private:
 
     static bool is_digit(char c) { return c >= '0' && c <= '9'; }
 
+    unsigned read_hex4() {
+        unsigned value = 0;
+        for (int i = 0; i < 4; ++i) {
+            if (at_end()) fail("invalid unicode escape");
+            const char c = take();
+            value <<= 4;
+            if (c >= '0' && c <= '9')      value |= static_cast<unsigned>(c - '0');
+            else if (c >= 'a' && c <= 'f') value |= static_cast<unsigned>(c - 'a' + 10);
+            else if (c >= 'A' && c <= 'F') value |= static_cast<unsigned>(c - 'A' + 10);
+            else fail("invalid unicode escape: expected hex digit");
+        }
+        return value;
+    }
+
+    std::string encode_utf8(unsigned codepoint) {
+        std::string out;
+        if (codepoint <= 0x7F) {
+            out.push_back(static_cast<char>(codepoint));
+        } else if (codepoint <= 0x7FF) {
+            out.push_back(static_cast<char>(0xC0 | (codepoint >> 6)));
+            out.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+        } else {
+            out.push_back(static_cast<char>(0xE0 | (codepoint >> 12)));
+            out.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F)));
+            out.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+        }
+        return out;
+    }
+
     char take() {
         const char c = text_[pos_++];
         if (c == '\n') {
@@ -84,7 +113,8 @@ private:
             case 't': expect_literal("true");  return Value(true);
             case 'f': expect_literal("false"); return Value(false);
             case 'n': expect_literal("null");  return Value();
-           default:
+            case '"': return Value(parse_string());
+        default:
                 if (peek() == '-' || (peek() >= '0' && peek() <= '9')) 
                     return parse_number();
                 fail(std::string("unexpected character '") + peek() + "'");
@@ -98,7 +128,7 @@ private:
             }
         }
     }
-     
+    
     Value parse_number(){
         const std::size_t start = pos_;
 
@@ -136,6 +166,41 @@ private:
         const auto [ptr, ec] = std::from_chars(first, last, value);
         if (ec != std::errc{} || ptr != last) fail("invalid number");
         return Value(value);
+    }
+
+    std::string parse_string() {
+        take();
+        std::string out;
+        while (true) {
+            if (at_end()) fail("unterminated string");
+
+            const char c = peek();
+            if (c == '"') {
+                take();
+                return out;
+            }
+
+            if (c == '\\') {
+                take();
+                if (at_end()) fail("unterminated escape");
+                switch (take()) {
+                    case '"':  out.push_back('"');  break;
+                    case '\\': out.push_back('\\'); break;
+                    case '/':  out.push_back('/');  break;
+                    case 'b':  out.push_back('\b'); break;
+                    case 'f':  out.push_back('\f'); break;
+                    case 'n':  out.push_back('\n'); break;
+                    case 'r':  out.push_back('\r'); break;
+                    case 't':  out.push_back('\t'); break;
+                    case 'u':  out += encode_utf8(read_hex4()); break;
+                    default:   fail("invalid escape sequence");
+                }
+                continue;
+            }
+            if (static_cast<unsigned char>(c) < 0x20) fail("control character in string");
+
+            out.push_back(take());
+        }
     }
 
     std::string_view text_;
