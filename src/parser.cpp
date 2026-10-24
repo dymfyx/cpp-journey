@@ -114,6 +114,8 @@ private:
             case 'f': expect_literal("false"); return Value(false);
             case 'n': expect_literal("null");  return Value();
             case '"': return Value(parse_string());
+            case '[': return parse_array();
+            case '{': return parse_object();
         default:
                 if (peek() == '-' || (peek() >= '0' && peek() <= '9')) 
                     return parse_number();
@@ -202,6 +204,63 @@ private:
             out.push_back(take());
         }
     }
+
+    Value parse_array() {
+        take();
+        Array items;
+        skip_whitespace();
+        if(peek() == ']'){
+            take();
+            return Value(std::move(items));
+        }
+        while (true) {
+            items.push_back(parse_value());
+            skip_whitespace();
+            if(at_end()) fail("unterminated array");
+            else if(peek() == ','){
+                take();
+                continue;
+            }
+            else if(peek() == ']'){
+                take();
+                return Value(std::move(items));
+            }
+            else fail("expected ',' or ']' in array");
+        }
+    }
+
+    Value parse_object() {
+        take(); 
+        Object members;
+        skip_whitespace();
+        if(peek() == '}'){
+            take();
+            return Value(std::move(members));
+        }
+        while (true) {
+            skip_whitespace();
+            if(at_end()) fail("unterminated object");
+            if(peek() != '"') fail("expected string key in object");
+            std::string key = parse_string();
+            skip_whitespace();
+            if(peek() != ':') fail("expected ':' after object key");
+            else take();
+            Value value = parse_value();
+            members.insert_or_assign(std::move(key), std::move(value));
+            skip_whitespace();
+            if(at_end()) fail("unterminated object");
+            if(peek() == ','){
+                take();
+                continue;
+            }
+            else if(peek() == '}'){
+                take();
+                return Value(std::move(members));
+            }
+            else fail("expected ',' or '}' in object");
+        }
+    }
+
 
     std::string_view text_;
     std::size_t pos_ = 0;
