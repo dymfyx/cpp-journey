@@ -1,0 +1,36 @@
+# ---- build artifacts ----
+build/
+.cache/
+compile_commands.json
+CMakeFiles/
+CMakeCache.txt
+Testing/
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dll
+*.exe
+*.pdb
+
+# ---- logs & large downloads ----
+*.log
+scripts/downloads/
+*.msi
+*.tar.gz
+*.zip
+*.iso
+
+# ---- editor / OS ----
+.vs/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- personal (not part of this project) ----
+家教简历/
