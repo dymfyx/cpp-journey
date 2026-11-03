@@ -209,7 +209,7 @@ private:
         take();
         Array items;
         skip_whitespace();
-        if(peek() == ']'){
+        if(!at_end() && peek() == ']'){
             take();
             return Value(std::move(items));
         }
@@ -217,15 +217,15 @@ private:
             items.push_back(parse_value());
             skip_whitespace();
             if(at_end()) fail("unterminated array");
-            else if(peek() == ','){
+            if(peek() == ','){
                 take();
                 continue;
             }
-            else if(peek() == ']'){
+            if(peek() == ']'){
                 take();
                 return Value(std::move(items));
             }
-            else fail("expected ',' or ']' in array");
+            fail("expected ',' or ']' in array");
         }
     }
 
@@ -233,7 +233,7 @@ private:
         take(); 
         Object members;
         skip_whitespace();
-        if(peek() == '}'){
+        if(!at_end() && peek() == '}'){
             take();
             return Value(std::move(members));
         }
@@ -243,6 +243,7 @@ private:
             if(peek() != '"') fail("expected string key in object");
             std::string key = parse_string();
             skip_whitespace();
+            if (at_end()) fail("unterminated object");
             if(peek() != ':') fail("expected ':' after object key");
             else take();
             Value value = parse_value();
@@ -253,11 +254,11 @@ private:
                 take();
                 continue;
             }
-            else if(peek() == '}'){
+            if(peek() == '}'){
                 take();
                 return Value(std::move(members));
             }
-            else fail("expected ',' or '}' in object");
+            fail("expected ',' or '}' in object");
         }
     }
 

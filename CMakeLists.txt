@@ -31,5 +31,10 @@ add_executable(jq_tests tests/test_parser.cpp)
 target_link_libraries(jq_tests PRIVATE jq_lib GTest::gtest_main)
 target_compile_options(jq_tests PRIVATE ${WARNINGS})
 
+add_executable(jq_dump_tests tests/test_dump.cpp)
+target_link_libraries(jq_dump_tests PRIVATE jq_lib GTest::gtest_main)
+target_compile_options(jq_dump_tests PRIVATE ${WARNINGS})
+
 include(GoogleTest)
 gtest_discover_tests(jq_tests)
+gtest_discover_tests(jq_dump_tests)
