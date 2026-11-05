@@ -16,7 +16,8 @@ set(SANITIZER_FLAGS -fsanitize=address,undefined -fno-omit-frame-pointer -g)
 
 add_library(jq_lib STATIC
     src/parser.cpp
-    src/value.cpp)
+    src/value.cpp
+    src/path.cpp)
 target_include_directories(jq_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_options(jq_lib PRIVATE ${WARNINGS} -Werror)
 if(ENABLE_SANITIZERS)
@@ -35,6 +36,15 @@ add_executable(jq_dump_tests tests/test_dump.cpp)
 target_link_libraries(jq_dump_tests PRIVATE jq_lib GTest::gtest_main)
 target_compile_options(jq_dump_tests PRIVATE ${WARNINGS})
 
+add_executable(jq_path_tests tests/test_path.cpp)
+target_link_libraries(jq_path_tests PRIVATE jq_lib GTest::gtest_main)
+target_compile_options(jq_path_tests PRIVATE ${WARNINGS})
+
+add_executable(jq_lite src/main.cpp)
+target_link_libraries(jq_lite PRIVATE jq_lib)
+target_compile_options(jq_lite PRIVATE ${WARNINGS})
+
 include(GoogleTest)
 gtest_discover_tests(jq_tests)
 gtest_discover_tests(jq_dump_tests)
+gtest_discover_tests(jq_path_tests)
