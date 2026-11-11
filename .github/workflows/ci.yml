@@ -1,0 +1,44 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  linux:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Debug + ASan/UBSan
+            build_type: Debug
+            sanitizers: "ON"
+          - name: Release
+            build_type: Release
+            sanitizers: "OFF"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgtest-dev libbenchmark-dev
+
+      - name: Configure
+        working-directory: projects/p1-jq-lite
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DENABLE_SANITIZERS=${{ matrix.sanitizers }}
+
+      - name: Build
+        working-directory: projects/p1-jq-lite
+        run: cmake --build build
+
+      - name: Test
+        working-directory: projects/p1-jq-lite
+        run: ctest --test-dir build --output-on-failure

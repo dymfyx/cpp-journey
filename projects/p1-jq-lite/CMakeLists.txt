@@ -48,3 +48,24 @@ include(GoogleTest)
 gtest_discover_tests(jq_tests)
 gtest_discover_tests(jq_dump_tests)
 gtest_discover_tests(jq_path_tests)
+
+# ---------------------------------------------------------------------------
+# 第 4 周：fuzz 驱动 + benchmark
+# ---------------------------------------------------------------------------
+
+add_executable(jq_fuzz tests/fuzz_parser.cpp)
+target_link_libraries(jq_fuzz PRIVATE jq_lib)
+target_compile_options(jq_fuzz PRIVATE ${WARNINGS} -Werror)
+add_test(NAME FuzzParser COMMAND jq_fuzz 5000)
+
+option(ENABLE_BENCHMARK "Build Google Benchmark targets" ON)
+if(ENABLE_BENCHMARK)
+    find_package(benchmark QUIET)
+    if(benchmark_FOUND)
+        add_executable(jq_bench benchmark/bench_parser.cpp)
+        target_link_libraries(jq_bench PRIVATE jq_lib benchmark::benchmark)
+        target_compile_options(jq_bench PRIVATE ${WARNINGS})
+    else()
+        message(STATUS "Google Benchmark not found, jq_bench disabled (sudo apt install libbenchmark-dev)")
+    endif()
+endif()
