@@ -23,45 +23,16 @@
 #include "jq/path.hpp"
 #include "jq/value.hpp"
 
+#include "doc_gen.hpp"
+
 namespace {
 
-// 生成一份约 1MB 的 JSON：一个 meta 对象 + records 数组
-std::string make_doc(std::size_t records) {
-    std::string out;
-    out.reserve(records * 220);
-    out += R"({"meta":{"name":"bench","count":)";
-    out += std::to_string(records);
-    out += R"(},"records":[)";
-    for (std::size_t i = 0; i < records; ++i) {
-        if (i != 0) {
-            out += ',';
-        }
-        out += R"({"id":)";
-        out += std::to_string(i);
-        out += R"(,"name":"user_)";
-        out += std::to_string(i % 1000);
-        out += R"(","active":)";
-        out += (i % 2 == 0) ? "true" : "false";
-        out += R"(,"score":)";
-        out += std::to_string((i * 37) % 1000);
-        out += R"(.5,"tags":["a","b","c"]})";
-    }
-    out += "]}";
-    return out;
-}
-
-const std::string& doc_tiny() {
-    static const std::string text = R"({"name":"jq-lite","version":1,"tags":["json","cli"],"debug":false})";
-    return text;
-}
-
-const std::string& doc_large() {
-    static const std::string text = make_doc(13000);  // 约 1 MB
-    return text;
-}
+// 生成逻辑见 doc_gen.hpp（与 bench_nlohmann 共用同一份字节）
+using bench_docs::large;
+using bench_docs::tiny;
 
 const jq::Value& value_large() {
-    static const jq::Value value = jq::parse(doc_large());
+    static const jq::Value value = jq::parse(large());
     return value;
 }
 
@@ -81,10 +52,10 @@ void benchmark_parse(benchmark::State& state, const std::string& text) {
 }  // namespace
 
 // 解析：典型配置文件
-BENCHMARK([](benchmark::State& state) { benchmark_parse(state, doc_tiny()); })->Name("Parse/Tiny");
+BENCHMARK([](benchmark::State& state) { benchmark_parse(state, tiny()); })->Name("Parse/Tiny");
 
 // 解析：1MB 文档
-BENCHMARK([](benchmark::State& state) { benchmark_parse(state, doc_large()); })->Name("Parse/Large");
+BENCHMARK([](benchmark::State& state) { benchmark_parse(state, large()); })->Name("Parse/Large");
 
 // 序列化：紧凑模式
 BENCHMARK([](benchmark::State& state) {
@@ -93,7 +64,7 @@ BENCHMARK([](benchmark::State& state) {
         const std::string out = value.dump(-1);
         benchmark::DoNotOptimize(out.size());
     }
-    report_bytes(state, doc_large().size());
+    report_bytes(state, large().size());
 })->Name("Dump/Compact");
 
 // 序列化：缩进模式
@@ -103,7 +74,7 @@ BENCHMARK([](benchmark::State& state) {
         const std::string out = value.dump(2);
         benchmark::DoNotOptimize(out.size());
     }
-    report_bytes(state, doc_large().size());
+    report_bytes(state, large().size());
 })->Name("Dump/Pretty");
 
 // 路径查询：每次都要 parse_path + 走 2 步

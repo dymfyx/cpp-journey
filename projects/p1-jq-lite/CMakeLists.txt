@@ -71,6 +71,17 @@ if(ENABLE_BENCHMARK)
         add_executable(jq_bench benchmark/bench_parser.cpp)
         target_link_libraries(jq_bench PRIVATE jq_lib benchmark::benchmark)
         target_compile_options(jq_bench PRIVATE ${WARNINGS})
+
+        # 第 5 周：和 nlohmann/json 对拍（同一个 doc_gen.hpp 生成输入）
+        find_package(nlohmann_json QUIET)
+        if(nlohmann_json_FOUND)
+            add_executable(bench_nlohmann benchmark/bench_nlohmann.cpp)
+            target_link_libraries(bench_nlohmann PRIVATE nlohmann_json::nlohmann_json benchmark::benchmark)
+            # 第三方头文件不套 -Werror 警告集，否则报的全是别人的代码
+            target_compile_options(bench_nlohmann PRIVATE -O2)
+        else()
+            message(STATUS "nlohmann_json not found, bench_nlohmann disabled (sudo apt install nlohmann-json3-dev)")
+        endif()
     else()
         message(STATUS "Google Benchmark not found, jq_bench disabled (sudo apt install libbenchmark-dev)")
     endif()

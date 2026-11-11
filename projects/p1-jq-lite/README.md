@@ -72,22 +72,47 @@ int main() {
 
 ## 性能
 
-| 基准 | 延迟 | 吞吐 |
+| 基准 | 延迟（中位数） | 吞吐 |
 | --- | --- | --- |
-| Parse/Tiny（80 B） | 201 ns | — |
-| Parse/Large（1 MB） | 5.19 ms | ~192 MiB/s |
-| Dump/Compact（1 MB） | 4.81 ms | ~205 MiB/s |
-| Dump/Pretty（1 MB） | 6.45 ms | ~153 MiB/s |
-| EvaluatePath/Large | 82.6 ns | — |
+| Parse/Tiny（80 B） | 204 ns | ~308 MiB/s |
+| Parse/Large（1 MB） | 8.63 ms | ~114 MiB/s |
+| Dump/Compact（1 MB） | 7.50 ms | ~131 MiB/s |
+| Dump/Pretty（1 MB） | 9.0 ms | ~109 MiB/s |
+| EvaluatePath/Large | 85 ns | — |
 
-测于 Ubuntu 24.04.5 / g++ 13.3.0 / `-O3 -DNDEBUG` / `ENABLE_SANITIZERS=OFF` / 1 MB 文档 / 单线程。
+测于 Ubuntu 24.04.5 / g++ 13.3.0 / `-O3 -DNDEBUG` / `ENABLE_SANITIZERS=OFF` / 1 MB 文档 / 单线程，
+每项取 5 次重复的中位数。笔记本 + WSL2 的噪声约 ±10%，换机器会不同。
 
 Debug + ASan 构建的数字比 Release 慢 60–100 倍，**不要**拿来做性能结论；CI 只跑测试，不做性能断言。
+
+### 与 nlohmann/json 对比
+
+同一个 1 MB 文档、同一套编译选项、同一个 Google Benchmark（`jq_bench` vs `bench_nlohmann`，
+各取 5 次中位数）：
+
+| 项目 | jq-lite | nlohmann::json | 比值 |
+| --- | --- | --- | --- |
+| 解析 80 B | 204 ns | 608 ns | jq-lite 快 3.0× |
+| 解析 1 MB | 8.63 ms | 18.24 ms | jq-lite 快 2.1× |
+| 紧凑序列化 1 MB | 7.50 ms | 4.63 ms | nlohmann 快 1.6× |
+| 缩进序列化 1 MB | 9.0 ms | 6.8 ms | nlohmann 快 1.3× |
+
+为什么：
+
+- **解析赢在实现简单**：递归下降直接构造 `std::variant` DOM，没有 SAX 中间层，也没有完整的
+  UTF-8 校验（nlohmann 两者都有）；
+- **序列化输在数字格式化**：每个 `double` 都走 `snprintf("%.17g")`，这是整条 dump 路径上最贵的
+  操作；nlohmann 用自己的 float→text 算法（Grisu/Dragonbox 一类）。
+- 下一步优化方向已明确：把 `snprintf` 换成 `std::to_chars`（C++17 的 `double` 重载），
+  预计紧凑序列化能追回大半差距——放在第 7 周做。
+- 需要说清楚的取舍：nlohmann/json 功能远多于 jq-lite（UTF-8 校验、SAX 接口、定制序列化、
+  CBOR/MessagePack），这个对比只说明「核心路径的性能」，不是「谁更好」。
 
 ```bash
 cmake -S . -B build-rel -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_SANITIZERS=OFF
 cmake --build build-rel
-./build-rel/jq_bench
+./build-rel/jq_bench            # jq-lite
+./build-rel/bench_nlohmann      # nlohmann/json（需要 sudo apt install nlohmann-json3-dev）
 ```
 
 ## 设计取舍
@@ -105,7 +130,7 @@ dump 的输出必须稳定可复现（相同语义的文档序列化后逐字节
 JSON 的六种类型是封闭集合，用 `variant` 可以在栈上存放、按值拷贝/比较、不需要 `new`/`delete`。代价是 `Value` 对象较大（约 50–60 字节，取决于 `std::string`/`std::vector` 的实现）且不能扩展新的 JSON 类型——但对 JSON 来说这不是需求。
 
 **5. 递归下降 + 显式行列号**
-递归下降的代码结构和 JSON 文法一一对应，最容易写对、最容易报出准确的错误位置；手写状态机更快但难维护，用 yacc/ANTLR 则引入生成器和依赖。性能已经够（192 MiB/s），正确性和可读性优先。
+递归下降的代码结构和 JSON 文法一一对应，最容易写对、最容易报出准确的错误位置；手写状态机更快但难维护，用 yacc/ANTLR 则引入生成器和依赖。性能上解析约 114 MiB/s、序列化约 131 MiB/s，够用；正确性和可读性优先。
 
 ## 测试
 
@@ -125,7 +150,7 @@ fuzz 做两件事：随机生成合法 JSON 检查 `parse(dump(v)) == v`；随�
 | 2 | 克隆实现序列化 `dump()`（转义、缩进、`%.17g`） | ✅ 25/25 |
 | 3 | CLI + 路径查询 `.a.b[0]`（编译成段序列后解释执行） | ✅ 41/41 |
 | 4 | fuzz 驱动 + Google Benchmark + GitHub Actions CI | ✅ 42/42 |
-| 5 | `install()`/`install(EXPORT)` 导出、`find_package(jq-lite)`、手写最小 benchmark 与 fuzz、与 nlohmann/json 对拍 | 进行中 |
+| 5 | `install()`/`install(EXPORT)` 导出、`find_package(jq-lite)`、手写最小 benchmark 与 fuzz | install/export ✅、nlohmann 对拍 ✅、练习待写 |
 | 6 | JSONTestSuite（`y_` 全过、`n_` 全拒）+ `docs/design.md` | 待做 |
 | 7–8 | 扩展任选：NDJSON 流式解析 / JSON Pointer / 递归深度限制与栈溢出防护 | 待做 |
 
