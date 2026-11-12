@@ -23,9 +23,29 @@
 #include <string_view>
 
 #include <jq/parser.hpp>
+#include "doc_gen.hpp"
 
 int main() {
-    // TODO(练习 1)：在这里实现
-    std::cout << "TODO: 手写 benchmark 还没写\n";
+    const std::string s = bench_docs::large();  // 先生成一份大文档，避免计时里包含生成时间
+
+    const int warmup = 5;
+    const int iterations = 20;
+    for(int i = 0; i < warmup; ++i) 
+        volatile auto v = jq::parse(s);
+    std::size_t sink = 0;  // 防止编译器优化掉 parse 的结果
+    const auto begin = std::chrono::steady_clock::now();
+    for(int i = 0; i < iterations; ++i){
+        auto v = jq::parse(s);
+        sink += v.size();  // 让编译器认为 v 被用到了
+    }
+        
+    const auto end = std::chrono::steady_clock::now();
+    const double seconds = std::chrono::duration<double>(end - begin).count();
+    const double throughput = (static_cast<double>(iterations) * static_cast<double>(s.size())) / seconds / (1024.0 * 1024.0);
+    std::cout << "Parse: " << throughput << "MiB/s\n";
+    std::cout << "Sink: " << sink << "\n";  // 防止编译器优化掉 parse 的结果
+       
+
+
     return 0;
 }

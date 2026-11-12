@@ -28,8 +28,43 @@
 #include <jq/error.hpp>
 #include <jq/parser.hpp>
 
+std::string generate(std::mt19937_64& rng) {
+    std::string output;
+    static const char alphabet[] = "{}[]\":\\,0123456789-+.eEtruefalsn ";
+    std::uniform_int_distribution<int> len_dist(0, 40);
+    std::uniform_int_distribution<int> dist(0, sizeof(alphabet) - 2);
+    const int len = len_dist(rng);
+    for (int i = 0; i < len; ++i) {
+        output += alphabet[dist(rng)];
+    }
+    return output;
+}
+
+void report(const std::string& input, const char* msg) {
+    std::cerr << "Unexpected exception: " << msg << "\n";
+    std::cerr << "Input (hex): ";
+    for (char c : input) {
+        std::cerr << std::hex << static_cast<int>(static_cast<unsigned char>(c)) << " ";
+    }
+    std::cerr << "\n";
+}
+
 int main() {
-    // TODO(练习 2)：在这里实现
-    std::cout << "TODO: 最小 fuzz 还没写\n";
+    std::mt19937_64 rng(0xC0FFEE);          // 固定种子，失败可复现
+    int ok = 0;
+    for (int i = 0; i < 200; ++i) {
+        std::string input = generate(rng);   // 三种来源选一个起步
+        try {
+            const auto v = jq::parse(input); // 也可能合法解析成功，也算 ok
+            (void)v;
+            ++ok;
+        } catch (const jq::ParseError&) {
+            ++ok;                            // 正确拒绝
+        } catch (const std::exception& e) {
+            report(input, e.what());         // 不该出现的异常类型
+            return 1;
+        }
+    }
+    std::cout << ok << "/200 ok\n";
     return 0;
 }
