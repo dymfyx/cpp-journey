@@ -142,6 +142,18 @@ ctest --test-dir build --output-on-failure                   # 全部（含 fuzz
 
 fuzz 做两件事：随机生成合法 JSON 检查 `parse(dump(v)) == v`；随机破坏后只允许抛 `ParseError`。失败会打印输入、dump、错误信息，并立即退出——配合固定种子可完整复现。
 
+### JSONTestSuite 官方测试集
+
+`tests/jsonsuite/` 收录了 [nst/JSONTestSuite](https://github.com/nst/JSONTestSuite) 的 `test_parsing`（318 个文件）：
+
+```bash
+./build/jq_jsontestsuite                     # y_ 95/95、n_ 188/188、i_ 接受 24 / 拒绝 11
+ctest --test-dir build -R JSONTestSuite      # 同一件事，走 ctest
+```
+
+`n_structure_100000_opening_arrays.json`（10 万层 `[`）这类输入会把递归下降的调用栈打爆，
+由解析器里的 `Depth_guard` 把嵌套上限锁在 512 层并抛 `ParseError`——这条规则写在 `tests/jsonsuite/README.md`。
+
 ## 10 周里程碑
 
 | 周 | 内容 | 状态 |
@@ -151,7 +163,7 @@ fuzz 做两件事：随机生成合法 JSON 检查 `parse(dump(v)) == v`；随�
 | 3 | CLI + 路径查询 `.a.b[0]`（编译成段序列后解释执行） | ✅ 41/41 |
 | 4 | fuzz 驱动 + Google Benchmark + GitHub Actions CI | ✅ 42/42 |
 | 5 | `install()`/`install(EXPORT)` 导出、`find_package(jq-lite)`、手写最小 benchmark 与 fuzz | install/export ✅、nlohmann 对拍 ✅、练习待写 |
-| 6 | JSONTestSuite（`y_` 全过、`n_` 全拒）+ `docs/design.md` | 待做 |
+| 6 | JSONTestSuite 接入（`y_` 全过、`n_` 全拒）+ 递归深度限制 + `docs/design.md` | 🔄 测试集 95/95、188/188 ✅；design.md 待写 |
 | 7–8 | 扩展任选：NDJSON 流式解析 / JSON Pointer / 递归深度限制与栈溢出防护 | 待做 |
 
 ## 参考

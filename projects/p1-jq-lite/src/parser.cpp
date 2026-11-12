@@ -99,6 +99,25 @@ private:
         throw ParseError(message, line_, column_);
     }
 
+    // 递归深度守卫（第 6 周加）：JSONTestSuite 里有 10 万层的 "[[[[…"，
+    // 不限制深度会把调用栈打爆（ASan 直接报 stack-overflow 并 abort）。
+    // 构造时深度 +1，析构时 -1；中途 fail() 抛异常时栈展开也会正常还原。
+    class Depth_guard {
+    public:
+        explicit Depth_guard(Parser& parser) : parser_(parser) {
+            if (++parser_.depth_ > k_max_depth) {
+                --parser_.depth_;
+                parser_.fail("maximum nesting depth exceeded");
+            }
+        }
+        ~Depth_guard() { --parser_.depth_; }
+        Depth_guard(const Depth_guard&) = delete;
+        Depth_guard& operator=(const Depth_guard&) = delete;
+
+    private:
+        Parser& parser_;
+    };
+
     void skip_whitespace() {
         while (!at_end() &&
                (peek() == ' ' || peek() == '\t' || peek() == '\n' || peek() == '\r')) {
@@ -206,6 +225,7 @@ private:
     }
 
     Value parse_array() {
+        Depth_guard guard(*this);
         take();
         Array items;
         skip_whitespace();
@@ -230,6 +250,7 @@ private:
     }
 
     Value parse_object() {
+        Depth_guard guard(*this);
         take(); 
         Object members;
         skip_whitespace();
@@ -263,10 +284,13 @@ private:
     }
 
 
+    static constexpr std::size_t k_max_depth = 512;  // 与 nlohmann/json 的 1024 同量级，够用且安全
+
     std::string_view text_;
     std::size_t pos_ = 0;
     std::size_t line_ = 1;
     std::size_t column_ = 1;
+    std::size_t depth_ = 0;  // 当前嵌套深度，只由 Depth_guard 维护
 };
 
 }  // namespace

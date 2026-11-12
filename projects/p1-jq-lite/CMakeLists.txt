@@ -101,6 +101,25 @@ target_link_libraries(min_fuzz PRIVATE jq_lib)
 target_compile_options(min_fuzz PRIVATE ${WARNINGS} -Werror)
 
 # ---------------------------------------------------------------------------
+# 第 6 周：JSONTestSuite 官方解析测试集驱动
+#   数据在 tests/jsonsuite（318 个文件：95 y_ / 188 n_ / 35 i_）
+#   获取：scripts/fetch-jsontestsuite.ps1（Windows 侧下载，WSL 连不上 github.com）
+# ---------------------------------------------------------------------------
+
+set(JSONSUITE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tests/jsonsuite")
+
+add_executable(jq_jsontestsuite tests/jsontest_runner.cpp)
+target_link_libraries(jq_jsontestsuite PRIVATE jq_lib)
+target_compile_options(jq_jsontestsuite PRIVATE ${WARNINGS} -Werror)
+target_compile_definitions(jq_jsontestsuite PRIVATE JSONSUITE_DIR="${JSONSUITE_DIR}")
+
+if(EXISTS "${JSONSUITE_DIR}")
+    add_test(NAME JSONTestSuite COMMAND jq_jsontestsuite "${JSONSUITE_DIR}")
+else()
+    message(STATUS "JSONTestSuite 数据缺失：把 JSONTestSuite 的 test_parsing 解压到 tests/jsonsuite")
+endif()
+
+# ---------------------------------------------------------------------------
 # 第 5 周：install / export，让别的项目能 find_package(jq-lite)
 #
 # 注意：install 出来的 .a 不能带 sanitizer 插桩，否则消费者链接时报
