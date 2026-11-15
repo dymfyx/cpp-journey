@@ -10,6 +10,8 @@
 #include "jq/value.hpp"
 
 #include <cstdio>
+#include <charconv>
+#include <cmath>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -98,9 +100,16 @@ void dump_impl(std::string& out, const Value& value, int indent, int depth) {
             out += value.as_bool() ? "true" : "false";
             return;
         case Type::Number:{
+            const double number = value.as_number();
+            if(!std::isfinite(number)){
+                throw std::runtime_error("JSON 不支持 NaN/Infinity");
+            }
             char buffer[32] = {};
-            std::snprintf(buffer, sizeof buffer, "%.17g", value.as_number());
-            out += buffer;
+            const auto result = std::to_chars(buffer, buffer + sizeof buffer, number, std::chars_format::general);
+            if(result.ec != std::errc()){
+                throw std::runtime_error("Value::dump: buffer too small for number");
+            }
+            out.append(buffer, result.ptr);
             return;
         }
             
