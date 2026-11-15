@@ -22,6 +22,13 @@
 #include <jq/error.hpp>
 #include <jq/parser.hpp>
 
+// JSONSUITE_DIR 由 CMake 的 target_compile_definitions 注入（见 CMakeLists.txt）。
+// 下面的兜底让这个文件也能被单文件编译 / 编辑器 IntelliSense 看懂，
+// 否则 VS Code 会把 JSONSUITE_DIR 标红（不是编译错误，只是 IDE 没拿到宏）。
+#ifndef JSONSUITE_DIR
+#define JSONSUITE_DIR "tests/jsonsuite"
+#endif
+
 namespace fs = std::filesystem;
 
 namespace {
