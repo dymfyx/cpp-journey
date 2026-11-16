@@ -34,3 +34,10 @@ desktop.ini
 
 # ---- personal (not part of this project) ----
 家教简历/
+
+# ---- personal misc (not part of the project) ----
+/_*.ps1
+/*.png
+/*.dt
+恋爱班会讲稿/
+
