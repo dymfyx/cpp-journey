@@ -1,14 +1,45 @@
 {
     "configurations": [
         {
-            "name": "Linux",
+            "name": "jq-lite",
             "includePath": [
+                "${workspaceFolder}/p1-jq-lite/include",
+                "${workspaceFolder}/p1-jq-lite/benchmark",
+                "${workspaceFolder}/p1-jq-lite/tests",
                 "${workspaceFolder}/**"
             ],
             "defines": [],
             "cStandard": "c17",
-            "cppStandard": "c++17",
-            "intelliSenseMode": "linux-clang-x64",
+            "cppStandard": "c++20",
+            "intelliSenseMode": "linux-gcc-x64",
+            "compileCommands": [
+                "${workspaceFolder}/p1-jq-lite/build/compile_commands.json"
+            ]
+        },
+        {
+            "name": "p0-02-buffer",
+            "includePath": [
+                "${workspaceFolder}/p0-02-buffer/include",
+                "${workspaceFolder}/**"
+            ],
+            "defines": [],
+            "cStandard": "c17",
+            "cppStandard": "c++20",
+            "intelliSenseMode": "linux-gcc-x64",
+            "compileCommands": [
+                "${workspaceFolder}/p0-02-buffer/build/compile_commands.json"
+            ]
+        },
+        {
+            "name": "p0-01-raii",
+            "includePath": [
+                "${workspaceFolder}/p0-01-raii/include",
+                "${workspaceFolder}/**"
+            ],
+            "defines": [],
+            "cStandard": "c17",
+            "cppStandard": "c++20",
+            "intelliSenseMode": "linux-gcc-x64",
             "compileCommands": [
                 "${workspaceFolder}/p0-01-raii/build/compile_commands.json"
             ]
