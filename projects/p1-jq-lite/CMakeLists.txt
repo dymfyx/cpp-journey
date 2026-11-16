@@ -62,6 +62,12 @@ gtest_discover_tests(jq_dump_tests)
 gtest_discover_tests(jq_path_tests)
 gtest_discover_tests(jq_pointer_tests)
 
+# 第 8 周扩展：可配置的最大嵌套深度（ParseOptions）
+add_executable(jq_parser_options_tests tests/test_parser_options.cpp)
+target_link_libraries(jq_parser_options_tests PRIVATE jq_lib GTest::gtest_main)
+target_compile_options(jq_parser_options_tests PRIVATE ${WARNINGS})
+gtest_discover_tests(jq_parser_options_tests)
+
 # ---------------------------------------------------------------------------
 # 第 4 周：fuzz 驱动 + benchmark
 # ---------------------------------------------------------------------------

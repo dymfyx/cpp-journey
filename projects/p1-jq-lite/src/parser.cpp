@@ -39,8 +39,8 @@ namespace {
 
 class Parser {
 public:
-    explicit Parser(std::string_view text) : text_(text) {}
-
+    Parser(std::string_view text, ParseOptions options)
+        : text_(text), options_(options) {}
     Value parse_document() {
         Value value = parse_value();
         skip_whitespace();
@@ -105,7 +105,7 @@ private:
     class Depth_guard {
     public:
         explicit Depth_guard(Parser& parser) : parser_(parser) {
-            if (++parser_.depth_ > k_max_depth) {
+            if (++parser_.depth_ > parser_.options_.max_depth) {
                 --parser_.depth_;
                 parser_.fail("maximum nesting depth exceeded");
             }
@@ -284,19 +284,23 @@ private:
     }
 
 
-    static constexpr std::size_t k_max_depth = 512;  // 与 nlohmann/json 的 1024 同量级，够用且安全
-
     std::string_view text_;
     std::size_t pos_ = 0;
     std::size_t line_ = 1;
     std::size_t column_ = 1;
+
+    ParseOptions options_;
     std::size_t depth_ = 0;  // 当前嵌套深度，只由 Depth_guard 维护
 };
 
 }  // namespace
 
 Value parse(std::string_view text) {
-    Parser parser(text);
+    return parse(text, ParseOptions{});
+}
+
+Value parse(std::string_view text, const ParseOptions& options) {
+    Parser parser(text, options);
     return parser.parse_document();
 }
 
