@@ -1,0 +1,11 @@
+build/
+build-*/
+.cache/
+compile_commands.json
+CMakeFiles/
+CMakeCache.txt
+Testing/
+*.o
+*.a
+*.log
+.vs/
