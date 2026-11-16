@@ -1,6 +1,6 @@
 # 交接文档 · 现代 C++ 学习项目（cpp-journey）
 
-> 更新时间：**2026-11-11**（Asia/Shanghai）
+> 更新时间：**2026-11-16**（Asia/Shanghai）
 > 用途：当前对话上下文满 / 换新 AI 窗口时，把本文件整段发给新 AI，即可无缝继续。
 > 维护规则：每次 session 结束前更新「0. 30 秒速读」「6. 当前状态」「12. 变更记录」。
 
@@ -12,11 +12,12 @@
 - **长期目标**：按 `ROADMAP.md`（AI 基模/系统方向）从易到难做一系列可上 GitHub、能进简历的现代 C++ 项目，边写边学。
 - **仓库**：https://github.com/dymfyx/cpp-journey （**public**，monorepo，三个子项目历史完整保留）
 - **工作目录**：`C:\Users\dym54\Desktop\c++项目`
-- **当前进度**：
+- **当前进度**（2026-11-16）：
   - 阶段 0 完成：`p0-01-raii`（RAII File）12/12、`p0-02-buffer`（深拷贝/移动/resize）15/15。
-  - **P1 `jq-lite` 第 1–4 周完成**：解析 / 序列化 / CLI 路径查询 / fuzz+benchmark+CI，**42 个测试全绿**（13 parser + 12 dump + 16 path + 1 fuzz 5000 次）。
-  - 第 4 周代码**尚未 commit/push**（见 §6 精确状态）。
-- **下一步（从这里继续）**：① 提交并推送第 4 周代码 → ② 用户手写 README 的「性能」「设计取舍」两节 → ③ 第 5 周：`install()`/`find_package` 导出、用户手写最小 benchmark + 最小 fuzz、与 `nlohmann/json` 性能对拍。
+  - **P1 `jq-lite` 全部完成**：解析 / 序列化 / CLI 路径查询 / fuzz + benchmark + CI / install + `find_package` / 与 nlohmann 对拍 / JSONTestSuite（y_ 95/95、n_ 188/188）/ RFC 6901 JSON Pointer / `ParseOptions{max_depth}`；**68 个测试全绿**，`docs/design.md` 已完成，仓库 `cpp-journey` 已推送（最新 `c4c7863`）。
+  - **P2 `p2-webserver` 第 1 周脚手架已建**：`Socket`/`Epoll`/`EchoServer` 接口 + 11 个验收测试，编译通过、测试全红（起跑线），代码在 `acf462a..c4c7863` 已推送。
+  - **P1 收尾**：流式输入（SAX/增量解析、NDJSON、1GB 文件内存 <10MB）列在 `projects/p1-jq-lite/TODO.md` 第 1 优先级，计划 P2 第 1 周完成后穿插做。
+- **下一步（从这里继续）**：① 用户实现 P2 第 1 周 `src/socket.cpp` → `src/epoll.cpp` → `src/echo_server.cpp`，让 `ctest` 11/11；② 然后切回 P1 流式输入；③ 之后 P2 第 2 周 HTTP 请求解析。
 - **教学协议**：中文；默认只给「位置 + 框架 + 任务 + 输入实例」，**完整代码只在用户明确要求时给**；代码必须由用户自己写，AI 负责脚手架、测试、评审、讲解。
 
 ---
@@ -45,6 +46,7 @@
 7. 验收标准：`-Werror` 零警告、ASan/UBSan 默认开、GTest 全绿、Release 基准数字可复现。
 8. 每个项目单开 VS Code 窗口（`code .`），避免 CMake Tools 抓错项目（用户踩过）。
 9. 用户会要求「详细讲解」「给个实例」「模拟一遍」，这类请求直接满足，别省。
+10. **每个新项目 / 新阶段开工前，先给一张「项目预习卡」**（用户 2026-11-16 明确要求）：① 这个项目是干什么的、实际用途；② 涉及的核心概念地图（3–5 个，按「是什么 → 为什么需要 → 用在哪 → 坑」讲）；③ 关键系统调用 / 库 API 速览（哪个函数干什么）；④ 一个最小可运行的心智模型（数据流图 / 时序图）；⑤ 常见坑 3–5 条；⑥ 可选深读资料。**先讲背景再给脚手架**，不要在用户完全不了解领域时直接丢代码任务。用户偏好「边写边补」而不是「先系统学完」，预习卡控制在 15–30 分钟阅读量即可。
 
 ---
 
@@ -168,8 +170,8 @@ cmake --build build && ctest --test-dir build --output-on-failure   # 42/42
 | 阶段 | 项目 | 状态 |
 |---|---|---|
 | 阶段 0 | RAII File + Buffer 移动语义 | ✅ |
-| P1 | jq-lite JSON 库（解析/序列化/CLI/fuzz/bench/CI/install） | 进行中（第 5 周起） |
-| P2 | epoll + 多线程 HTTP 服务器，`POST /predict` + 动态 batching | 未开始 |
+| P1 | jq-lite JSON 库（解析/序列化/CLI/fuzz/bench/CI/install/Pointer） | ✅ 68/68，已推送 |
+| P2 | epoll + 多线程 HTTP 服务器，`POST /predict` + 动态 batching | 进行中（第 1 周脚手架） |
 | 暑假 2027 | CUDA 入门（需 12.8+，sm_120）+ pybind11 | 未开始 |
 | P3 | MiniTensor（张量 + 自动微分 + MNIST） | 未开始 |
 | P4 | CUDA 算子库（matmul 多级优化 / softmax / layerNorm / fused attention） | 未开始 |
@@ -230,13 +232,12 @@ git 身份：`user.name=dymfyx`、`user.email=1526864905@qq.com`；分支 `main`
 
 ## 10. 挂起 / 未启动事项
 
-- [ ] P1 第 5 周任务（install/export、手写 min bench/fuzz、nlohmann 对拍）
-- [ ] `projects/p1-jq-lite/README.md` 性能与设计取舍两节
-- [ ] 清理仓库根垃圾文件（`_*.ps1`、`*.png`、`Testing/`）
-- [ ] JSONTestSuite（y_ 全过、n_ 全拒）—— 原计划第 4 周，尚未做
-- [ ] CUDA Toolkit 12.8+ / ncu / nsys / pybind11 / PyTorch（P1 后）
+- [ ] **P1 流式输入（SAX/增量解析 + NDJSON + 1GB 文件内存 <10MB）**——`projects/p1-jq-lite/TODO.md` 第 1 优先级，P2 第 1 周后做
+- [ ] P1 其余收尾：tokenizer.json 实战、复盘博客、JSON Pointer 接 CLI、fuzz 24h、MIT License
+- [ ] P2 第 1 周实现（Socket/Epoll/EchoServer，11 个测试）→ 第 2 周 HTTP 解析
+- [ ] 仓库历史清理（旧 commit 里仍有个人杂项文件，可选 `git filter-repo`）
+- [ ] CUDA Toolkit 12.8+ / ncu / nsys / pybind11 / PyTorch（P2 后，暑假 2027）
 - [ ] `docs/python-track.md` 的 12 周 Python 训练（用户提过，尚未启动）
-- [ ] P2 epoll WebServer 脚手架（P1 毕业后）
 
 ---
 
@@ -257,4 +258,10 @@ git 身份：`user.name=dymfyx`、`user.email=1526864905@qq.com`；分支 `main`
 | 日期 | 变更 |
 |---|---|
 | 2026-10-26 | 创建（阶段 0 完成、P1 第 2 周进行中） |
+| 2026-11-06 | P1 第 4 周完成（42/42，fuzz + benchmark + CI） |
+| 2026-11-11 | 交接文档重写；修复 `jib` target 与 value.cpp 实验残留 |
+| 2026-11-12 | 第 5 周 install/export、nlohmann 对拍、min_bench/min_fuzz 练习 |
+| 2026-11-12 | JSONTestSuite 接入 + 512 层 Depth_guard，43/43 |
+| 2026-11-15 | 第 6 周 design.md、第 7 周 `std::to_chars` 优化（Dump 162→246 MiB/s） |
+| 2026-11-16 | JSON Pointer（20 测试）+ ParseOptions；仓库 README/ROADMAP 改第一人称；P2 第 1 周脚手架；新增「项目预习卡」教学协议（规则 10） |
 | 2026-11-11 | 全面重写：单仓库 GitHub 上线、P1 第 1–4 周完成（42/42）、第 4 周未提交状态、修 `jib` 拼写与 value.cpp 实验残留、补 §8 命令与 §9 坑清单 |
