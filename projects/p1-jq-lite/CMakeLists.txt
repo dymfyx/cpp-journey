@@ -19,7 +19,8 @@ set(SANITIZER_FLAGS -fsanitize=address,undefined -fno-omit-frame-pointer -g)
 add_library(jq_lib STATIC
     src/parser.cpp
     src/value.cpp
-    src/path.cpp)
+    src/path.cpp
+    src/pointer.cpp)
 target_include_directories(jq_lib PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
@@ -46,6 +47,11 @@ add_executable(jq_path_tests tests/test_path.cpp)
 target_link_libraries(jq_path_tests PRIVATE jq_lib GTest::gtest_main)
 target_compile_options(jq_path_tests PRIVATE ${WARNINGS})
 
+# 第 8 周扩展：RFC 6901 JSON Pointer
+add_executable(jq_pointer_tests tests/test_pointer.cpp)
+target_link_libraries(jq_pointer_tests PRIVATE jq_lib GTest::gtest_main)
+target_compile_options(jq_pointer_tests PRIVATE ${WARNINGS})
+
 add_executable(jq_lite src/main.cpp)
 target_link_libraries(jq_lite PRIVATE jq_lib)
 target_compile_options(jq_lite PRIVATE ${WARNINGS})
@@ -54,6 +60,7 @@ include(GoogleTest)
 gtest_discover_tests(jq_tests)
 gtest_discover_tests(jq_dump_tests)
 gtest_discover_tests(jq_path_tests)
+gtest_discover_tests(jq_pointer_tests)
 
 # ---------------------------------------------------------------------------
 # 第 4 周：fuzz 驱动 + benchmark

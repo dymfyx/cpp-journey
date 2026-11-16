@@ -10,7 +10,7 @@
 #include "jq/value.hpp"
 
 #include <gtest/gtest.h>
-
+#include <limits>
 #include <string>
 
 #include "jq/parser.hpp"
@@ -35,6 +35,13 @@ TEST(DumpTest, DumpNumbers) {
     EXPECT_EQ(Value(-3.25).dump(), "-3.25");
     EXPECT_EQ(Value(100.0).dump(), "100");
     EXPECT_EQ(Value(0.1).dump(), "0.1");
+}
+
+TEST(DumpTest, DumpNumbersEdgeCases) {
+    EXPECT_EQ(Value(1e300).dump(), "1e+300");
+    EXPECT_EQ(Value(-0.0).dump(), "-0");
+    EXPECT_EQ(Value(1.0 / 3.0).dump(), "0.3333333333333333");
+    EXPECT_THROW(Value(std::numeric_limits<double>::infinity()).dump(), std::runtime_error);
 }
 
 TEST(DumpTest, DumpStringEscapes) {
