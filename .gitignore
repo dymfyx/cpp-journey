@@ -41,3 +41,7 @@ desktop.ini
 /*.dt
 恋爱班会讲稿/
 
+
+# ---- 复盘手册生成物（源文件在 docs/handbook/）----
+docs/handbook/_combined.*
+docs/*.pdf
